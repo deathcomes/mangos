@@ -12344,7 +12344,7 @@ void Player::PrepareGossipMenu(WorldObject *pSource, uint32 menuId)
             {
                 uint32 idxEntry = MAKE_PAIR32(menuId, itr->second.id);
 
-                if (NpcOptionLocale const *no = sObjectMgr.GetNpcOptionLocale(idxEntry))
+                if (GossipMenuItemsLocale const *no = sObjectMgr.GetGossipMenuItemsLocale(idxEntry))
                 {
                     if (no->OptionText.size() > (size_t)loc_idx && !no->OptionText[loc_idx].empty())
                         strOptionText = no->OptionText[loc_idx];
@@ -12452,6 +12452,14 @@ void Player::OnGossipSelect(WorldObject* pSource, uint32 gossipListId, uint32 me
 
             if (pMenuData.m_gAction_poi)
                 PlayerTalkClass->SendPointOfInterest(pMenuData.m_gAction_poi);
+
+            if (pMenuData.m_gAction_script)
+            {
+                if (pSource->GetTypeId() == TYPEID_UNIT)
+                    GetMap()->ScriptsStart(sGossipScripts, pMenuData.m_gAction_script, this, pSource);
+                else if (pSource->GetTypeId() == TYPEID_GAMEOBJECT)
+                    GetMap()->ScriptsStart(sGossipScripts, pMenuData.m_gAction_script, pSource, this);
+            }
 
             break;
         }
@@ -19207,7 +19215,7 @@ BGQueueIdBasedOnLevel Player::GetBattleGroundQueueIdFromLevel() const
     uint32 queue_id = ( getLevel() / 10) - 1;
     if( queue_id >= MAX_BATTLEGROUND_QUEUES )
     {
-        sLog.outError("BattleGround: too high queue_id %u this shouldn't happen", queue_id);
+        sLog.outError("BattleGround: too high queue_id %u for player %u (acc: %u) with level %u", queue_id, GetGUIDLow(), GetSession()->GetAccountId(), getLevel());
         return QUEUE_ID_MAX_LEVEL_80;
     }
     return BGQueueIdBasedOnLevel(queue_id);
