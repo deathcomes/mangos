@@ -326,18 +326,19 @@ void WorldSession::LogoutPlayer(bool Save)
 
             _player->SetPvPDeath(!aset.empty());
             _player->KillPlayer();
-            _player->BuildPlayerRepop();
-            _player->RepopAtGraveyard();
-
-            // give honor to all attackers from set like group case
-            for(std::set<Player*>::const_iterator itr = aset.begin(); itr != aset.end(); ++itr)
-                (*itr)->RewardHonor(_player,aset.size());
 
             // give bg rewards and update counters like kill by first from attackers
             // this can't be called for all attackers.
             if(!aset.empty())
                 if(BattleGround *bg = _player->GetBattleGround())
                     bg->HandleKillPlayer(_player,*aset.begin());
+
+            _player->BuildPlayerRepop();
+            _player->RepopAtGraveyard();
+
+            // give honor to all attackers from set like group case
+            for(std::set<Player*>::const_iterator itr = aset.begin(); itr != aset.end(); ++itr)
+                (*itr)->RewardHonor(_player,aset.size());
         }
         else if(_player->HasAuraType(SPELL_AURA_SPIRIT_OF_REDEMPTION))
         {
@@ -348,9 +349,6 @@ void WorldSession::LogoutPlayer(bool Save)
             _player->BuildPlayerRepop();
             _player->RepopAtGraveyard();
         }
-        //drop a flag if player is carrying it
-        if(BattleGround *bg = _player->GetBattleGround())
-            bg->EventPlayerLoggedOut(_player);
 
         ///- Teleport to home if the player is in an invalid instance
         if(!_player->m_InstanceValid && !_player->isGameMaster())
