@@ -5455,6 +5455,17 @@ void Player::SetSkill(uint32 id, uint16 currVal, uint16 maxVal)
                 if(SkillLineAbilityEntry const *pAbility = sSkillLineAbilityStore.LookupEntry(j))
                     if (pAbility->skillId==id)
                         removeSpell(sSpellMgr.GetFirstSpellInChain(pAbility->spellId));
+
+            //remove dependent quest
+            for ( uint16 i = 0; i < MAX_QUEST_LOG_SIZE; ++i )
+            {
+                uint32 quest_id = GetQuestSlotQuestId(i);
+                if (const Quest *pQuest = sObjectMgr.GetQuestTemplate(quest_id))
+                {
+                    if(pQuest->GetSkillOrClass() == id)
+                        RemoveQuest(quest_id);
+                }
+            }
         }
     }
     else if(currVal)                                        //add
@@ -13091,6 +13102,31 @@ void Player::AddQuest( Quest const *pQuest, Object *questGiver )
     UpdateForQuestWorldObjects();
 }
 
+void Player::RemoveQuest(uint32 quest_id)
+{
+    if( quest_id )
+    {
+        uint16 log_slot = FindQuestSlot( quest_id );
+        if( log_slot < MAX_QUEST_LOG_SIZE)
+        {
+            if(!TakeQuestSourceItem( quest_id, true ))
+                return;                                     // can't un-equip some items, reject quest cancel
+
+            if (const Quest *pQuest = sObjectMgr.GetQuestTemplate(quest_id))
+            {
+                if (pQuest->HasFlag(QUEST_MANGOS_FLAGS_TIMED))
+                    RemoveTimedQuest(quest_id);
+            }
+
+            SetQuestStatus( quest_id, QUEST_STATUS_NONE);
+
+            SetQuestSlot(log_slot, 0);
+            GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_QUEST_ABANDONED, 1);
+        }
+    }
+}
+
+
 void Player::CompleteQuest( uint32 quest_id )
 {
     if( quest_id )
@@ -15166,7 +15202,7 @@ bool Player::LoadFromDB( uint32 guid, SqlQueryHolder *holder )
                     SetSkill(skill_id,0,0);
                     sLog.outError("Player %s has more than two professions. Skill %u removed",GetName(),skill_id);
                 }
-            }    
+            }
         }
     }
 
@@ -20615,7 +20651,7 @@ void Player::HandleFall(MovementInfo const& movementInfo)
     // calculate total z distance of the fall
     //float z_diff = m_lastFallZ - movementInfo.z;
     float z_diff = (m_lastFallZ >= m_anti_BeginFallZ ? m_lastFallZ : m_anti_BeginFallZ) - movementInfo.z;
-    
+
     m_anti_BeginFallZ=INVALID_HEIGHT;
     sLog.outDebug("zDiff = %f", z_diff);
 

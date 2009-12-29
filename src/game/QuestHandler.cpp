@@ -372,22 +372,7 @@ void WorldSession::HandleQuestLogRemoveQuest(WorldPacket& recv_data)
     if( slot < MAX_QUEST_LOG_SIZE )
     {
         if(uint32 quest = _player->GetQuestSlotQuestId(slot))
-        {
-            if(!_player->TakeQuestSourceItem( quest, true ))
-                return;                                     // can't un-equip some items, reject quest cancel
-
-            if (const Quest *pQuest = sObjectMgr.GetQuestTemplate(quest))
-            {
-                if (pQuest->HasFlag(QUEST_MANGOS_FLAGS_TIMED))
-                    _player->RemoveTimedQuest(quest);
-            }
-
-            _player->SetQuestStatus( quest, QUEST_STATUS_NONE);
-        }
-
-        _player->SetQuestSlot(slot, 0);
-
-        _player->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_QUEST_ABANDONED, 1);
+            _player->RemoveQuest(quest);
     }
 }
 
