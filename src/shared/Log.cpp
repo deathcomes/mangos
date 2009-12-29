@@ -249,6 +249,10 @@ void Log::Initialize()
 
     // Char log settings
     m_charLog_Dump = sConfig.GetBoolDefault("CharLogDump", false);
+
+    // Log File size
+    m_count_lines = 0;
+    m_file_size_limit = sConfig.GetIntDefault("LogFileSize", 0);
 }
 
 FILE* Log::openLogFile(char const* configFileName,char const* configTimeStampFlag, char const* mode)
@@ -265,6 +269,8 @@ FILE* Log::openLogFile(char const* configFileName,char const* configTimeStampFla
         else
             logfn += m_logsTimestamp;
     }
+
+    if(strcmp(configFileName,"LogFile")==0 && log_filename.empty())    { log_filename=log_filename.append(m_logsDir+logfn); }
 
     return fopen((m_logsDir+logfn).c_str(), mode);
 }
@@ -340,6 +346,7 @@ void Log::outTitle( const char * str)
         fprintf(logfile, str);
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
 
     fflush(stdout);
@@ -355,6 +362,7 @@ void Log::outString()
         outTimestamp(logfile);
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stdout);
 }
@@ -390,6 +398,7 @@ void Log::outString( const char * str, ... )
         va_end(ap);
 
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stdout);
 }
@@ -426,6 +435,7 @@ void Log::outError( const char * err, ... )
 
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stderr);
 }
@@ -476,6 +486,7 @@ void Log::outErrorDb( const char * err, ... )
 
         fprintf(dberLogfile, "\n" );
         fflush(dberLogfile);
+        swapLogFile();
     }
     fflush(stderr);
 }
@@ -513,6 +524,7 @@ void Log::outBasic( const char * str, ... )
         fprintf(logfile, "\n" );
         va_end(ap);
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stdout);
 }
@@ -552,6 +564,7 @@ void Log::outDetail( const char * str, ... )
 
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
 
     fflush(stdout);
@@ -616,6 +629,7 @@ void Log::outDebug( const char * str, ... )
 
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stdout);
 }
@@ -652,6 +666,7 @@ void Log::outCommand( uint32 account, const char * str, ... )
         fprintf(logfile, "\n" );
         va_end(ap);
         fflush(logfile);
+        swapLogFile();
     }
 
     if (m_gmlog_per_account)
@@ -760,6 +775,7 @@ void Log::outMenu( const char * str, ... )
 
         fprintf(logfile, "\n" );
         fflush(logfile);
+        swapLogFile();
     }
     fflush(stdout);
 }
@@ -779,6 +795,29 @@ void Log::outRALog(    const char * str, ... )
         fflush(raLogfile);
     }
     fflush(stdout);
+}
+
+void Log::swapLogFile()
+{
+    if (logfile && m_file_size_limit>0) // there is a logfile and a size limit
+    {
+        if(m_count_lines >= m_file_size_limit)
+        {
+            m_count_lines=0;
+            if(log_size_limit_filename.empty())    // generate backup file name if empty
+            {
+                size_t dot_pos = log_filename.find_last_of(".");
+                log_size_limit_filename.append(log_filename);
+                log_size_limit_filename.insert(dot_pos,"_part");
+            }
+            // close the logfile, remove, rename, open new logfile .. TODO Error Handling
+            fclose(logfile);
+            remove(log_size_limit_filename.c_str());
+            rename(log_filename.c_str(),log_size_limit_filename.c_str());
+            logfile=fopen(log_filename.c_str(), "w");
+        }
+        else {m_count_lines++;}
+    }
 }
 
 void outstring_log(const char * str, ...)

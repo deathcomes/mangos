@@ -155,6 +155,13 @@ class Log : public MaNGOS::Singleton<Log, MaNGOS::ClassLevelLockable<Log, ACE_Th
         // gm log control
         bool m_gmlog_per_account;
         std::string m_gmlog_filename_format;
+
+        // log file size limit
+        uint32 m_file_size_limit; // limit size <= 0 deaktivate
+        uint32 m_count_lines; // count the lines in the log file
+        std::string log_filename;
+        std::string log_size_limit_filename;
+        void swapLogFile();
 };
 
 #define sLog MaNGOS::Singleton<Log>::Instance()

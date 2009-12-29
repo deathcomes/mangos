@@ -223,6 +223,11 @@ AddonChannel = 1
 #        0 = Minimum; 1 = Error; 2 = Detail; 3 = Full/Debug
 #        Default: 0
 #
+#    LogFileSize
+#        Server logging file size
+#        0 = disabled
+#        Default: 0
+#
 #    LogFilter_AchievementUpdates
 #    LogFilter_CreatureMoves
 #    LogFilter_TransportMoves
@@ -298,6 +303,7 @@ LogTime = 0
 LogFile = "Server.log"
 LogTimestamp = 0
 LogFileLevel = 0
+LogFileSize = 0
 LogFilter_AchievementUpdates = 1
 LogFilter_CreatureMoves = 1
 LogFilter_TransportMoves = 1
