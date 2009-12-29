@@ -756,6 +756,7 @@ ClientCacheVersion = 0
 Event.Announce = 0
 BeepAtStart = 1
 Motd = "Welcome to the Massive Network Game Object Server."
+CheckProfAtLogin = 1
 
 ###################################################################################################################
 # PLAYER INTERACTION

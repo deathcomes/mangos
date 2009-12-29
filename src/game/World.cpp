@@ -816,6 +816,8 @@ void World::LoadConfigSettings(bool reload)
         m_configs[CONFIG_MIN_PETITION_SIGNS] = 9;
     }
 
+    m_configs[CONFIG_CHECK_PROF_AT_LOGIN]  = sConfig.GetIntDefault("CheckProfAtLogin", 0);
+
     m_configs[CONFIG_GM_LOGIN_STATE]       = sConfig.GetIntDefault("GM.LoginState", 2);
     m_configs[CONFIG_GM_VISIBLE_STATE]     = sConfig.GetIntDefault("GM.Visible", 2);
     m_configs[CONFIG_GM_ACCEPT_TICKETS]    = sConfig.GetIntDefault("GM.AcceptTickets", 2);
