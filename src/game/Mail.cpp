@@ -800,6 +800,11 @@ MailSender::MailSender( Object* sender, MailStationery stationery ) : m_statione
         case TYPEID_PLAYER:
             m_messageType = MAIL_NORMAL;
             m_senderId = sender->GetGUIDLow();
+            {
+                Player* plr = sObjectMgr.GetPlayer(m_senderId);
+                if(plr && plr->isGameMaster())
+                    m_stationery = MAIL_STATIONERY_GM;
+            }
             break;
         default:
             m_messageType = MAIL_NORMAL;
