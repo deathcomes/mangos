@@ -1370,6 +1370,7 @@ void Spell::SetTargetMap(uint32 effIndex, uint32 targetMode, UnitList& targetUni
                     break;
                 case 28542:                                 // Life Drain
                     unMaxTargets = 2;
+                    break;
                 case 28796:                                 // Poison Bolt Volley
                 case 29213:                                 // Curse of the Plaguebringer
                 case 31298:                                 // Sleep
