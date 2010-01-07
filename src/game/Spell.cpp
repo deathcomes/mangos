@@ -1122,6 +1122,13 @@ void Spell::DoSpellHitOnUnit(Unit *unit, const uint32 effectMask)
         return;
     }
 
+    // Recheck deflection (only for delayed spells)
+    if (m_spellInfo->speed && unit->HasAura(19263))
+    {
+        realCaster->SendSpellMiss(unit, m_spellInfo->Id, SPELL_MISS_DODGE);
+        return;
+    }
+
     if (unit->GetTypeId() == TYPEID_PLAYER)
     {
         ((Player*)unit)->GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_BE_SPELL_TARGET, m_spellInfo->Id);
@@ -1390,8 +1397,9 @@ void Spell::SetTargetMap(uint32 effIndex, uint32 targetMode, UnitList& targetUni
                 case 31298:                                 // Sleep
                     unMaxTargets = 3;
                     break;
-                case 30843:                                 // Enfeeble
-                case 55665:                                 // Life Drain
+                case 30843:                                 // Enfeeble TODO: exclude top threat target from target selection
+                case 42005:                                 // Bloodboil TODO: need to be 5 targets(players) furthest away from caster
+                case 55665:                                 // Life Drain (h)
                     unMaxTargets = 5;
                     break;
                 case 54098:                                 // Poison Bolt Volley (h)
@@ -2701,6 +2709,13 @@ void Spell::cast(bool skipCheck)
                 AddPrecastSpell(23230);                     // Blood Fury - Healing Reduction
             else if(m_spellInfo->Id == 20594)               // Stoneskin
                 AddTriggeredSpell(65116);                   // Stoneskin - armor 10% for 8 sec
+            break;
+        }
+        case SPELLFAMILY_HUNTER:
+        {
+            // Deterrence
+            if (m_spellInfo->Id == 19263)
+                AddTriggeredSpell(67801);                   // Deterrence
             break;
         }
         case SPELLFAMILY_MAGE:
@@ -4203,9 +4218,9 @@ SpellCastResult Spell::CheckCast(bool strict)
             return SPELL_FAILED_CASTER_AURASTATE;
     }
     //Check Caster for combat
-    if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo) && !m_caster->isIgnoreUnitState(m_spellInfo)
-    && !m_spellInfo->SpellFamilyFlags & SPELLFAMILYFLAG_ROGUE_STEALTH && m_spellInfo->SpellFamilyFlags & SPELLFAMILYFLAG_ROGUE_VANISH) // Vanish hack
-        return SPELL_FAILED_AFFECTING_COMBAT; 
+    if(m_caster->isInCombat() && IsNonCombatSpell(m_spellInfo) && !m_caster->isIgnoreUnitState(m_spellInfo) 
+       && !m_spellInfo->SpellFamilyFlags & SPELLFAMILYFLAG_ROGUE_STEALTH && m_spellInfo->SpellFamilyFlags & SPELLFAMILYFLAG_ROGUE_VANISH)  // Vanish hack
+        return SPELL_FAILED_AFFECTING_COMBAT;
 
     // cancel autorepeat spells if cast start when moving
     // (not wand currently autorepeat cast delayed to moving stop anyway in spell update code)
@@ -5016,19 +5031,6 @@ SpellCastResult Spell::CheckCast(bool strict)
             case SPELL_EFFECT_LEAP:
             case SPELL_EFFECT_TELEPORT_UNITS_FACE_CASTER:
             {
-                float dis = GetSpellRadius(sSpellRadiusStore.LookupEntry(m_spellInfo->EffectRadiusIndex[i]));
-                float fx = m_caster->GetPositionX() + dis * cos(m_caster->GetOrientation());
-                float fy = m_caster->GetPositionY() + dis * sin(m_caster->GetOrientation());
-                // teleport a bit above terrain level to avoid falling below it
-                float fz = m_caster->GetBaseMap()->GetHeight(fx,fy,m_caster->GetPositionZ(),true);
-                if(fz <= INVALID_HEIGHT)                    // note: this also will prevent use effect in instances without vmaps height enabled
-                    return SPELL_FAILED_TRY_AGAIN;
-
-                float caster_pos_z = m_caster->GetPositionZ();
-                // Control the caster to not climb or drop when +-fz > 8
-                if(!(fz <= caster_pos_z + 8 && fz >= caster_pos_z - 8))
-                    return SPELL_FAILED_TRY_AGAIN;
-
                 // not allow use this effect at battleground until battleground start
                 if(m_caster->GetTypeId() == TYPEID_PLAYER)
                     if(BattleGround const *bg = ((Player*)m_caster)->GetBattleGround())
@@ -5059,6 +5061,26 @@ SpellCastResult Spell::CheckCast(bool strict)
                         if(m_caster->GetTypeId() != TYPEID_PLAYER || !((Player*)m_caster)->IsInFeralForm())
                             return SPELL_FAILED_ONLY_SHAPESHIFT;
                         break;
+                    // Wild Growth
+                    case 48438:
+                    case 53248:
+                    case 53249:
+                    case 53251:
+                    {
+                        if (m_caster->GetTypeId() != TYPEID_PLAYER)
+                            return SPELL_FAILED_DONT_REPORT;
+                        
+                        Unit* target = m_targets.getUnitTarget();
+                        if (!target || target->GetTypeId() != TYPEID_PLAYER)
+                            return SPELL_FAILED_BAD_TARGETS;
+                        
+                        const Group* casterGroup = ((Player*)m_caster)->GetGroup();
+                        bool isInSameRaidOrGroup = casterGroup && casterGroup == ((Player*)target)->GetGroup();
+                        if (m_caster != target && !isInSameRaidOrGroup)
+                            return SPELL_FAILED_BAD_TARGETS;
+
+                        break;
+                    }
                     default:
                         break;
                 }

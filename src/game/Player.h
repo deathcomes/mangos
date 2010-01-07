@@ -832,6 +832,16 @@ struct MovementInfo
     void SetMovementFlags(MovementFlags f) { flags = f; }
 };
 
+ //here stored last safe player's position
+struct SafePosition
+{
+    float x, y, z;
+    SafePosition()
+    {
+        x = y = z = 0.0f;
+    }
+};
+
 // flags that use in movement check for example at spell casting
 MovementFlags const movementFlagsMask = MovementFlags(
     MOVEMENTFLAG_FORWARD |MOVEMENTFLAG_BACKWARD  |MOVEMENTFLAG_STRAFE_LEFT|MOVEMENTFLAG_STRAFE_RIGHT|
@@ -1279,6 +1289,12 @@ class MANGOS_DLL_SPEC Player : public Unit
         {
             Item* mainItem = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
             return mainItem && mainItem->GetProto()->InventoryType == INVTYPE_2HWEAPON && !CanTitanGrip();
+        }
+        bool IsTwoHandUsedInDualWield() const
+        {
+            Item* offItem = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_OFFHAND);
+            Item* mainItem = GetItemByPos(INVENTORY_SLOT_BAG_0, EQUIPMENT_SLOT_MAINHAND);
+            return mainItem && mainItem->GetProto()->InventoryType == INVTYPE_2HWEAPON || offItem && offItem->GetProto()->InventoryType == INVTYPE_2HWEAPON;
         }
         void SendNewItem( Item *item, uint32 count, bool received, bool created, bool broadcast = false );
         bool BuyItemFromVendor(uint64 vendorguid, uint32 item, uint8 count, uint8 bag, uint8 slot);
@@ -2130,7 +2146,9 @@ class MANGOS_DLL_SPEC Player : public Unit
         /***                 VARIOUS SYSTEMS                   ***/
         /*********************************************************/
         MovementInfo m_movementInfo;
+        SafePosition m_safeposition;
         bool HasMovementFlag(MovementFlags f) const;        // for script access to m_movementInfo.HasMovementFlag
+
         void UpdateFallInformationIfNeed(MovementInfo const& minfo,uint16 opcode);
         Unit *m_mover;
         void SetFallInformation(uint32 time, float z)

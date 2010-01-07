@@ -300,7 +300,8 @@ void Player::UpdateAttackPowerAndDamage(bool ranged )
             case CLASS_DRUID:
             {
                 //Check if Predatory Strikes is skilled
-                float mLevelMult = 0.0;
+                float mLevelMult = 0.0f;
+                float mBonusWeaponAtt = 0.0f;
                 switch(m_form)
                 {
                     case FORM_CAT:
@@ -312,9 +313,12 @@ void Player::UpdateAttackPowerAndDamage(bool ranged )
                         for(Unit::AuraList::const_iterator itr = mDummy.begin(); itr != mDummy.end(); ++itr)
                         {
                             // Predatory Strikes (effect 0)
-                            if ((*itr)->GetEffIndex()==0 && (*itr)->GetSpellProto()->SpellIconID == 1563)
+                            if ((*itr)->GetSpellProto()->SpellIconID == 1563 && (*itr)->GetEffIndex() == 0 && IsInFeralForm())
+                                mLevelMult = getLevel() * (*itr)->GetModifier()->m_amount / 100.0f;
+                            // Predatory Strikes (effect 1)
+                            else if ((*itr)->GetSpellProto()->SpellIconID == 1563 && (*itr)->GetEffIndex() == 1)
                             {
-                                mLevelMult = (*itr)->GetModifier()->m_amount / 100.0f;
+                                mBonusWeaponAtt = (*itr)->GetModifier()->m_amount * m_baseFeralAP / 100.0f;
                                 break;
                             }
                         }
@@ -326,12 +330,12 @@ void Player::UpdateAttackPowerAndDamage(bool ranged )
                 switch(m_form)
                 {
                     case FORM_CAT:
-                        val2 = getLevel()*(mLevelMult+2.0f) + GetStat(STAT_STRENGTH)*2.0f + GetStat(STAT_AGILITY) - 20.0f + m_baseFeralAP; break;
+                        val2 = GetStat(STAT_STRENGTH)*2.0f + GetStat(STAT_AGILITY) - 20.0f + mLevelMult + m_baseFeralAP + mBonusWeaponAtt; break;
                     case FORM_BEAR:
                     case FORM_DIREBEAR:
-                        val2 = getLevel()*(mLevelMult+3.0f) + GetStat(STAT_STRENGTH)*2.0f - 20.0f + m_baseFeralAP; break;
+                        val2 = GetStat(STAT_STRENGTH)*2.0f - 20.0f + mLevelMult + m_baseFeralAP + mBonusWeaponAtt; break;
                     case FORM_MOONKIN:
-                        val2 = getLevel()*(mLevelMult+1.5f) + GetStat(STAT_STRENGTH)*2.0f - 20.0f + m_baseFeralAP; break;
+                        val2 = GetStat(STAT_STRENGTH)*2.0f - 20.0f + m_baseFeralAP + mBonusWeaponAtt; break;
                     default:
                         val2 = GetStat(STAT_STRENGTH)*2.0f - 20.0f; break;
                 }
@@ -435,8 +439,8 @@ void Player::CalculateMinMaxDamage(WeaponAttackType attType, bool normalized, fl
         uint32 lvl = getLevel();
         if ( lvl > 60 ) lvl = 60;
 
-        weapon_mindamage = lvl*0.85*att_speed;
-        weapon_maxdamage = lvl*1.25*att_speed;
+        weapon_mindamage = lvl*0.714*att_speed;
+        weapon_maxdamage = lvl*1.114*att_speed;
     }
     else if(!IsUseEquipedWeapon(attType==BASE_ATTACK))      //check if player not in form but still can't use weapon (broken/etc)
     {
@@ -884,7 +888,9 @@ bool Pet::UpdateStats(Stats stat)
     Unit *owner = GetOwner();
     if ( stat == STAT_STAMINA )
     {
-        if(owner)
+        if(owner && owner->GetTypeId() == TYPEID_PLAYER  && owner->getClass() == CLASS_WARLOCK)
+            value += float(owner->GetStat(stat)) * 0.75f;
+        else if (owner)
             value += float(owner->GetStat(stat)) * 0.3f;
     }
     else if ( stat == STAT_STRENGTH && getPetType() == SUMMON_PET )
@@ -972,10 +978,22 @@ void Pet::UpdateMaxHealth()
 {
     UnitMods unitMod = UNIT_MOD_HEALTH;
     float stamina = GetStat(STAT_STAMINA) - GetCreateStat(STAT_STAMINA);
+    float multiplicator;
+
+    // nesocips warlock pet stats calculation
+    switch(GetEntry())
+    {
+        case 416:   multiplicator = 8.4f;  break; // imp
+        case 1860:                                // voidwalker
+        case 17252: multiplicator = 11.0f; break; // felguard
+        case 1863:  multiplicator = 9.1f;  break; // succubus
+        case 417:   multiplicator = 9.5f;  break; // felhunter
+        default:    multiplicator = 10.0f; break;
+    }
 
     float value   = GetModifierValue(unitMod, BASE_VALUE) + GetCreateHealth();
     value  *= GetModifierValue(unitMod, BASE_PCT);
-    value  += GetModifierValue(unitMod, TOTAL_VALUE) + stamina * 10.0f;
+    value  += GetModifierValue(unitMod, TOTAL_VALUE) + stamina * multiplicator;
     value  *= GetModifierValue(unitMod, TOTAL_PCT);
 
     SetMaxHealth((uint32)value);
@@ -986,10 +1004,22 @@ void Pet::UpdateMaxPower(Powers power)
     UnitMods unitMod = UnitMods(UNIT_MOD_POWER_START + power);
 
     float addValue = (power == POWER_MANA) ? GetStat(STAT_INTELLECT) - GetCreateStat(STAT_INTELLECT) : 0.0f;
+    float multiplicator;
+
+    // nesocips warlock pet stats calculation
+    switch(GetEntry())
+    {
+        case 416:   multiplicator = 4.95f; break; // imp
+        case 1860:                                // voidwalker
+        case 1863:                                // succubus
+        case 417:                                 // felhunter
+        case 17252: multiplicator = 11.5f; break; // felguard
+        default:    multiplicator = 15.0f; break;
+    }
 
     float value  = GetModifierValue(unitMod, BASE_VALUE) + GetCreatePowers(power);
     value *= GetModifierValue(unitMod, BASE_PCT);
-    value += GetModifierValue(unitMod, TOTAL_VALUE) +  addValue * 15.0f;
+    value += GetModifierValue(unitMod, TOTAL_VALUE) + addValue * multiplicator;
     value *= GetModifierValue(unitMod, TOTAL_PCT);
 
     SetMaxPower(power, uint32(value));

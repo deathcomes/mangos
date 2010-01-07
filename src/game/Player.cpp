@@ -3681,11 +3681,12 @@ bool Player::resetTalents(bool no_cost)
     */
 
 
-    if(m_canTitanGrip)
+    if(CanTitanGrip())
     {
-        m_canTitanGrip = false;
+        SetCanTitanGrip(false);
         if(sWorld.getConfig(CONFIG_OFFHAND_CHECK_AT_TALENTS_RESET))
             AutoUnequipOffhandIfNeed();
+        RemoveAurasDueToSpellByCancel(49152);
     }
 
     return true;
@@ -5769,6 +5770,13 @@ bool Player::SetPosition(float x, float y, float z, float orientation, bool tele
         y = GetPositionY();
         z = GetPositionZ();
 
+        if(teleport || !(m_movementInfo.flags & (MOVEMENTFLAG_FALLING | MOVEMENTFLAG_JUMPING)))
+        {
+            m_safeposition.x = x;
+            m_safeposition.y = y;
+            m_safeposition.z = z;
+        }
+
         // group update
         if(GetGroup() && (old_x != x || old_y != y))
             SetGroupUpdateFlag(GROUP_UPDATE_FLAG_POSITION);
@@ -6464,6 +6472,8 @@ void Player::UpdateZone(uint32 newZone, uint32 newArea)
 
     // check some item equip limitations (in result lost CanTitanGrip at talent reset, for example)
     AutoUnequipOffhandIfNeed();
+    if (CanTitanGrip() && IsTwoHandUsedInDualWield() && !HasAura(49152))
+        CastSpell(this, 49152, true);
 
     // recent client version not send leave/join channel packets for built-in local channels
     UpdateLocalChannels( newZone );
@@ -10670,6 +10680,14 @@ Item* Player::EquipItem( uint16 pos, Item *pItem, bool update )
     // only for full equip instead adding to stack
     GetAchievementMgr().UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_EQUIP_ITEM, pItem->GetEntry());
 
+    // titans grip dmg penalty for 2h weapons
+    if (CanTitanGrip())
+    {
+        ItemPrototype const *pProto = pItem->GetProto();
+        if (pProto && pProto->InventoryType == INVTYPE_2HWEAPON && !HasAura(49152))
+            CastSpell(this, 49152, true);
+    }
+
     return pItem;
 }
 
@@ -10809,6 +10827,14 @@ void Player::RemoveItem( uint8 bag, uint8 slot, bool update )
         pItem->SetSlot( NULL_SLOT );
         if( IsInWorld() && update )
             pItem->SendCreateUpdateToPlayer( this );
+
+        // titans grip dmg penalty for 2h weapons removed if player does not have any
+        if (HasAura(49152))
+        {
+            ItemPrototype const *pProto = pItem->GetProto();
+            if (pProto && pProto->InventoryType == INVTYPE_2HWEAPON && !IsTwoHandUsedInDualWield())
+                RemoveAurasDueToSpellByCancel(49152);
+        }
     }
 }
 
@@ -16985,7 +17011,7 @@ void Player::RemovePet(Pet* pet, PetSaveMode mode, bool returnreagent)
             {
                 if(spellInfo->Reagent[i] > 0)
                 {
-                    ItemPosCountVec dest;                   //for succubus, voidwalker, felhunter and felguard credit soulshard when despawn reason other than death (out of range, logout)
+                    ItemPosCountVec dest;                   //for succubus, voidwalker, felhunter and felguard credit soulshard when despawn reason other than death (out of range)
                     uint8 msg = CanStoreNewItem( NULL_BAG, NULL_SLOT, dest, spellInfo->Reagent[i], spellInfo->ReagentCount[i] );
                     if( msg == EQUIP_ERR_OK )
                     {
@@ -18337,7 +18363,7 @@ bool Player::EnchantmentFitsRequirements(uint32 enchantmentcondition, int8 slot)
         if(i == slot)
             continue;
         Item *pItem2 = GetItemByPos( INVENTORY_SLOT_BAG_0, i );
-        if(pItem2 && pItem2->GetProto()->Socket[0].Color)
+        if(pItem2 && !pItem2->IsBroken() && pItem2->GetProto()->Socket[0].Color)
         {
             for(uint32 enchant_slot = SOCK_ENCHANTMENT_SLOT; enchant_slot < SOCK_ENCHANTMENT_SLOT+3; ++enchant_slot)
             {
@@ -19487,7 +19513,7 @@ void Player::AutoUnequipOffhandIfNeed()
         return;
 
     // need unequip offhand for 2h-weapon without TitanGrip (in any from hands)
-    if (CanTitanGrip() || (offItem->GetProto()->InventoryType != INVTYPE_2HWEAPON && !IsTwoHandUsed()))
+    if (CanTitanGrip() || !((IsTwoHandUsedInDualWield() && offItem->GetProto()->InventoryType != INVTYPE_NON_EQUIP) || offItem->GetProto()->InventoryType == INVTYPE_2HWEAPON))
         return;
 
     ItemPosCountVec off_dest;
@@ -20984,6 +21010,12 @@ void Player::UnsummonPetTemporaryIfAny()
     if(!pet)
         return;
 
+    if (((Player*)this)->InArena())
+    {
+        RemovePet(pet, PET_SAVE_NOT_IN_SLOT); // remove pet while is player teleported to arena
+        return;
+    }
+ 
     if(!m_temporaryUnsummonedPetNumber && pet->isControlled() && !pet->isTemporarySummoned() )
     {
         m_temporaryUnsummonedPetNumber = pet->GetCharmInfo()->GetPetNumber();

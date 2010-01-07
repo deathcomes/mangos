@@ -312,7 +312,7 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNoImmediateEffect,                         //259 SPELL_AURA_DECREASE_PERIODIC_HEAL               implemented in Unit::SpellHealingBonus
     &Aura::HandleNoImmediateEffect,                         //260 SPELL_AURA_SCREEN_EFFECT (miscvalue = id in ScreenEffect.dbc) not required any code
     &Aura::HandlePhase,                                     //261 SPELL_AURA_PHASE undetectable invisibility?     implemented in Unit::isVisibleForOrDetect
-    &Aura::HandleIgnoreUnitState,                           //262 SPELL_AURA_IGNORE_UNIT_STATE Alows some abilities whitch are aviable only in some cases.... implented in Unit::isIgnoreUnitState & Spell::CheckCast
+    &Aura::HandleIgnoreUnitState,                           //262 SPELL_AURA_IGNORE_UNIT_STATE Allows some abilities which are avaible only in some cases.... implemented in Unit::isIgnoreUnitState & Spell::CheckCast
     &Aura::HandleAllowOnlyAbility,                          //263 SPELL_AURA_ALLOW_ONLY_ABILITY player can use only abilities set in SpellClassMask
     &Aura::HandleUnused,                                    //264 unused (3.0.8a-3.2.2a)
     &Aura::HandleUnused,                                    //265 unused (3.0.8a-3.2.2a)
@@ -337,8 +337,8 @@ pAuraHandler AuraHandler[TOTAL_AURAS]=
     &Aura::HandleNULL,                                      //284 51 spells
     &Aura::HandleAuraModAttackPowerOfArmor,                 //285 SPELL_AURA_MOD_ATTACK_POWER_OF_ARMOR  implemented in Player::UpdateAttackPowerAndDamage
     &Aura::HandleNoImmediateEffect,                         //286 SPELL_AURA_ABILITY_PERIODIC_CRIT      implemented in Aura::IsCritFromAbilityAura called from Aura::PeriodicTick
-    &Aura::HandleNoImmediateEffect,                         //287 SPELL_AURA_DEFLECT_SPELLS             implemented in Unit::MagicSpellHitResult and Unit::MeleeSpellHitResult
-    &Aura::HandleNULL,                                      //288 increase parry/deflect, prevent attack (single spell used 67801)
+    &Aura::HandleNoImmediateEffect,                         //287 SPELL_AURA_DEFLECT_SPELLS             implemented in Unit::MagicSpellHitResult
+    &Aura::HandleNoImmediateEffect,                         //288 SPELL_AURA_DEFLECT_RANGED_HIT         implemented in Unit::MeleeSpellHitResult
     &Aura::HandleUnused,                                    //289 unused (3.2.2a)
     &Aura::HandleAuraModAllCritChance,                      //290 SPELL_AURA_MOD_ALL_CRIT_CHANCE
     &Aura::HandleNoImmediateEffect,                         //291 SPELL_AURA_MOD_QUEST_XP_PCT           implemented in Player::GiveXP
@@ -2362,6 +2362,36 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                             // not use ammo and not allow use
                             ((Player*)m_target)->RemoveAmmo();
                         return;
+                    case 55328:                                 // Stoneclaw Totem I
+                        m_target->CastSpell( m_target, 5728, true );
+                        return;
+                    case 55329:                                 // Stoneclaw Totem II
+                        m_target->CastSpell( m_target, 6397, true );
+                        return;
+                    case 55330:                                 // Stoneclaw Totem III
+                        m_target->CastSpell( m_target, 6398, true );
+                        return;
+                    case 55332:                                 // Stoneclaw Totem IV
+                        m_target->CastSpell( m_target, 6399, true );
+                        return;
+                    case 55333:                                 // Stoneclaw Totem V
+                        m_target->CastSpell( m_target, 10425, true );
+                        return;
+                    case 55335:                                 // Stoneclaw Totem VI
+                        m_target->CastSpell( m_target, 10426, true );
+                        return;
+                    case 55278:                                 // Stoneclaw Totem VII
+                        m_target->CastSpell( m_target, 25513, true );
+                        return;
+                    case 58589:                                 // Stoneclaw Totem VIII
+                        m_target->CastSpell( m_target, 58583, true );
+                        return;
+                    case 58590:                                 // Stoneclaw Totem IX
+                        m_target->CastSpell( m_target, 58584, true );
+                        return;
+                    case 58591:                                 // Stoneclaw Totem X
+                        m_target->CastSpell( m_target, 58585, true );
+                        return;
                     case 62061:                             // Festive Holiday Mount
                         if (m_target->HasAuraType(SPELL_AURA_MOUNTED))
                             // Reindeer Transformation
@@ -2485,6 +2515,13 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
                 m_target->CastSpell(m_target, 28240, true, NULL, this);
                 return;
             }
+            case 32286:                                     // Focus Target Visual
+            {
+                if (m_removeMode == AURA_REMOVE_BY_DEFAULT)
+                    m_target->CastSpell(m_target, 32301, true, NULL, this);
+
+                return;
+            }
             case 36730:                                     // Flame Strike
             {
                 m_target->CastSpell(m_target, 36731, true, NULL, this);
@@ -2522,6 +2559,19 @@ void Aura::HandleAuraDummy(bool apply, bool Real)
             // when removing aura from one target due to casting Living Bomb at other.
             if (m_duration == 0 || m_removeMode == AURA_REMOVE_BY_DISPEL)
                 m_target->CastSpell(m_target,m_modifier.m_amount,true,NULL,this);
+            return;
+        }
+
+        // Vampiric Touch
+        if ((GetSpellProto()->SpellFamilyFlags & UI64LIT(0x40000000000)) && m_removeMode==AURA_REMOVE_BY_DISPEL)
+        {
+            Unit* caster = GetCaster();
+            if (!caster)
+                return;
+
+            int32 basepoints = GetSpellProto()->EffectBasePoints[1] * 8;
+            basepoints = caster->SpellDamageBonus(m_target, GetSpellProto(), basepoints, DOT);
+            m_target->CastCustomSpell(m_target, 64085, &basepoints, NULL, NULL, false);
             return;
         }
 
@@ -4389,13 +4439,16 @@ void Aura::HandleModTaunt(bool apply, bool Real)
 /*********************************************************/
 /***                  MODIFY SPEED                     ***/
 /*********************************************************/
-void Aura::HandleAuraModIncreaseSpeed(bool /*apply*/, bool Real)
+void Aura::HandleAuraModIncreaseSpeed(bool apply, bool Real)
 {
     // all applied/removed only at real aura add/remove
     if(!Real)
         return;
 
     m_target->UpdateSpeed(MOVE_RUN, true);
+
+    if (apply && GetSpellProto()->Id == 58875)
+        m_target->CastSpell(m_target, 58876, true);
 }
 
 void Aura::HandleAuraModIncreaseMountedSpeed(bool apply, bool Real)
@@ -4529,7 +4582,8 @@ void Aura::HandleModMechanicImmunity(bool apply, bool /*Real*/)
         {
             GameObject* obj = m_target->GetGameObject(48018);
             if (obj)
-                ((Player*)m_target)->TeleportTo(obj->GetMapId(),obj->GetPositionX(),obj->GetPositionY(),obj->GetPositionZ(),obj->GetOrientation());
+                if (m_target->IsWithinDist(obj,GetSpellMaxRange(sSpellRangeStore.LookupEntry(GetSpellProto()->rangeIndex))))
+                    ((Player*)m_target)->TeleportTo(obj->GetMapId(),obj->GetPositionX(),obj->GetPositionY(),obj->GetPositionZ(),obj->GetOrientation());
         }
     }
     // Bestial Wrath
@@ -4837,6 +4891,20 @@ void Aura::HandleAuraPeriodicDummy(bool apply, bool Real)
 void Aura::HandlePeriodicHeal(bool apply, bool /*Real*/)
 {
     m_isPeriodic = apply;
+
+	// Gift of the Naaru
+	if ( ( m_spellProto->SpellFamilyFlags2 & 0x80000000 ) && m_spellProto->SpellVisual[0] == 7625 )
+	{
+		Unit *caster = GetCaster();
+		if (!caster)
+			return;
+
+		int32 ap = int32 ( 0.22f * caster->GetTotalAttackPowerValue(BASE_ATTACK) );
+		int32 holy = caster->SpellBaseDamageBonus( GetSpellSchoolMask( m_spellProto ) ) 
+				   + caster->SpellBaseDamageBonusForVictim( GetSpellSchoolMask( m_spellProto ), m_target );
+		holy = int32( holy * 377 / 1000 );
+		m_modifier.m_amount += ap > holy ? ap : holy;
+	}
 }
 
 void Aura::HandlePeriodicDamage(bool apply, bool Real)
@@ -6153,13 +6221,12 @@ void Aura::HandleShapeshiftBoosts(bool apply)
             else
                 ++itr;
         }
-    }
-
-    // Improved Barkskin - apply/remove armor bonus due to shapeshift
-    if (((Player*)m_target)->HasSpell(63410) || ((Player*)m_target)->HasSpell(63411))
-    {
-        m_target->RemoveAurasDueToSpell(66530);
-        m_target->CastSpell(m_target,66530,true);
+        // Improved Barkskin - apply/remove armor bonus due to shapeshift
+        if (((Player*)m_target)->HasSpell(63410) || ((Player*)m_target)->HasSpell(63411))
+        {
+            m_target->RemoveAurasDueToSpell(66530);
+            m_target->CastSpell(m_target,66530,true);
+        }
     }
 }
 
