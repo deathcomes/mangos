@@ -121,7 +121,7 @@ void PlayerRelocationNotifier::Visit(CreatureMapType &m)
 
         if (relocated_for_ai && c->isAlive() && !c->NotifyExecuted(NOTIFY_VISIBILITY_CHANGED))
             PlayerCreatureRelocationWorker(&i_player, c);
-	}
+    }
 }
 
 void PlayerRelocationNotifier::Visit(PlayerMapType &m)

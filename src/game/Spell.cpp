@@ -4220,11 +4220,11 @@ SpellCastResult Spell::CheckCast(bool strict)
     }
 
     // check for Effect::OpenLock
-	if( m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->isTotalImmune())
-		if (m_spellInfo->Effect[0] == SPELL_EFFECT_OPEN_LOCK)
-		{
-			return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-		}
+    if( m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->isTotalImmune())
+        if (m_spellInfo->Effect[0] == SPELL_EFFECT_OPEN_LOCK)
+        {
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        }
 
     if(Unit *target = m_targets.getUnitTarget())
     {

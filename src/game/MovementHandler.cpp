@@ -463,7 +463,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             float trans_rad = movementInfo.t_x*movementInfo.t_x + movementInfo.t_y*movementInfo.t_y + movementInfo.t_z*movementInfo.t_z;
             if (trans_rad > 3600.0f) // transport radius = 60 yards //cheater with on_transport_flag
             {
-	            return;
+                return;
             }
             // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::const_iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
@@ -501,7 +501,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         {
             plMover->m_anti_BeginFallZ=INVALID_HEIGHT;
         }
-	    }
+        }
 
     // ---- anti-cheat features -->>>
     uint32 Anti_TeleTimeDiff=plMover ? time(NULL) - plMover->Anti__GetLastTeleTime() : time(NULL);
