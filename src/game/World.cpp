@@ -1656,7 +1656,7 @@ void World::Update(uint32 diff)
     {
         m_timers[WUPDATE_SESSIONS].Reset();
 
-        lagLogStart(LAG_LOG_SESSION)
+        lagLogStart(LAG_LOG_SESSION);
         UpdateSessions(diff);
         lagLogStop(LAG_LOG_SESSION);
     }
