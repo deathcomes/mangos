@@ -2876,9 +2876,11 @@ void Spell::handle_immediate()
     // process immediate effects (items, ground, etc.) also initialize some variables
     _handle_immediate_phase();
 
+    if (!m_UniqueTargetInfo.empty())
     for(std::list<TargetInfo>::iterator ihit= m_UniqueTargetInfo.begin();ihit != m_UniqueTargetInfo.end();++ihit)
         DoAllEffectOnTarget(&(*ihit));
 
+    if (!m_UniqueGOTargetInfo.empty())
     for(std::list<GOTargetInfo>::iterator ihit= m_UniqueGOTargetInfo.begin();ihit != m_UniqueGOTargetInfo.end();++ihit)
         DoAllEffectOnTarget(&(*ihit));
 
@@ -4233,11 +4235,11 @@ SpellCastResult Spell::CheckCast(bool strict)
     }
 
     // check for Effect::OpenLock
-	if( m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->isTotalImmune())
-		if (m_spellInfo->Effect[0] == SPELL_EFFECT_OPEN_LOCK)
-		{
-			return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
-		}
+    if( m_caster->GetTypeId()==TYPEID_PLAYER && ((Player*)m_caster)->isTotalImmune())
+        if (m_spellInfo->Effect[0] == SPELL_EFFECT_OPEN_LOCK)
+        {
+            return SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW;
+        }
 
     if(Unit *target = m_targets.getUnitTarget())
     {

@@ -197,6 +197,11 @@ void Unit::Update( uint32 p_time )
     // Spells must be processed with event system BEFORE they go to _UpdateSpells.
     // Or else we may have some SPELL_STATE_FINISHED spells stalled in pointers, that is bad.
     m_Events.Update( p_time );
+  if(!IsInWorld())
+    {
+        sLog.outError("unit is not in world anymore after m_events update");
+        return;
+    }
     _UpdateSpells( p_time );
 
     CleanupDeletedAuras();
@@ -2579,6 +2584,72 @@ void Unit::SendMeleeAttackStop(Unit* victim)
 
     /*if(victim->GetTypeId() == TYPEID_UNIT)
     ((Creature*)victim)->AI().EnterEvadeMode(this);*/
+}
+
+void Unit::SendInitialVisiblePacketsFor(Player *player)
+{
+    SendAurasFor(player);
+    if(isAlive())
+    {
+        if(GetTypeId() == TYPEID_UNIT)
+            ((Creature*)this)->SendMonsterMoveWithSpeedToCurrentDestination(player);
+
+        if(hasUnitState(UNIT_STAT_MELEE_ATTACKING) && getVictim())
+            SendMeleeAttackStart(getVictim());
+    }
+}
+
+void Unit::SendAurasFor(Player *player)
+{
+    if(GetVisibleAuras()->empty())                  // speedup things
+        return;
+
+    WorldPacket data(SMSG_AURA_UPDATE_ALL);
+    data.append(GetPackGUID());
+
+    Unit::VisibleAuraMap const *visibleAuras = GetVisibleAuras();
+    for(Unit::VisibleAuraMap::const_iterator itr = visibleAuras->begin(); itr != visibleAuras->end(); ++itr)
+    {
+        for(uint32 j = 0; j < 3; ++j)
+        {
+            if(Aura *aura = GetAura(itr->second, j))
+            {
+                data << uint8(aura->GetAuraSlot());
+                data << uint32(aura->GetId());
+
+                if(aura->GetId())
+                {
+                    uint8 auraFlags = aura->GetAuraFlags();
+                    // flags
+                    data << uint8(auraFlags);
+                    // level
+                    data << uint8(aura->GetAuraLevel());
+                    // charges
+                    if (aura->GetAuraCharges())
+                        data << uint8(aura->GetAuraCharges() * aura->GetStackAmount());
+                    else
+                        data << uint8(aura->GetStackAmount());
+
+                    if(!(auraFlags & AFLAG_NOT_CASTER))
+                    {
+                        if (Unit* m_caster = aura->GetCaster())
+                            data.append(m_caster->GetPackGUID());
+                        else
+                            data << uint8(0);                                   // pguid
+                    }
+
+                    if(auraFlags & AFLAG_DURATION)          // include aura duration
+                    {
+                        data << uint32(aura->GetAuraMaxDuration());
+                        data << uint32(aura->GetAuraDuration());
+                    }
+                }
+                break;
+            }
+        }
+    }
+
+    player->GetSession()->SendPacket(&data);
 }
 
 bool Unit::isSpellBlocked(Unit *pVictim, SpellEntry const * /*spellProto*/, WeaponAttackType attackType)
@@ -10958,12 +11029,12 @@ void Unit::SetVisibility(UnitVisibility x)
 
     if(IsInWorld())
     {
-        Map *m = GetMap();
-
-        if(GetTypeId()==TYPEID_PLAYER)
-            m->PlayerRelocation((Player*)this,GetPositionX(),GetPositionY(),GetPositionZ(),GetOrientation());
+        if(GetTypeId() == TYPEID_PLAYER)
+            GetMap()->AddNotifier((Player*)this, false);
         else
-            m->CreatureRelocation((Creature*)this,GetPositionX(),GetPositionY(),GetPositionZ(),GetOrientation());
+            GetMap()->AddNotifier((Creature*)this, false);
+
+        AddToNotify(NOTIFY_VISIBILITY_CHANGED);
     }
 }
 

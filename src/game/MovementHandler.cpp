@@ -463,7 +463,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
             float trans_rad = movementInfo.t_x*movementInfo.t_x + movementInfo.t_y*movementInfo.t_y + movementInfo.t_z*movementInfo.t_z;
             if (trans_rad > 3600.0f) // transport radius = 60 yards //cheater with on_transport_flag
             {
-	            return;
+                return;
             }
             // elevators also cause the client to send MOVEMENTFLAG_ONTRANSPORT - just unmount if the guid can be found in the transport list
             for (MapManager::TransportSet::const_iterator iter = sMapMgr.m_Transports.begin(); iter != sMapMgr.m_Transports.end(); ++iter)
@@ -501,7 +501,7 @@ void WorldSession::HandleMovementOpcodes( WorldPacket & recv_data )
         {
             plMover->m_anti_BeginFallZ=INVALID_HEIGHT;
         }
-	    }
+        }
 
     // ---- anti-cheat features -->>>
     uint32 Anti_TeleTimeDiff=plMover ? time(NULL) - plMover->Anti__GetLastTeleTime() : time(NULL);
@@ -795,7 +795,8 @@ void WorldSession::HandleMoveNotActiveMover(WorldPacket &recv_data)
 
     if(_player->m_mover->GetGUID() == old_mover_guid)
     {
-        sLog.outError("HandleMoveNotActiveMover: incorrect mover guid: mover is " I64FMT " and should be " I64FMT " instead of " UI64FMTD, _player->m_mover->GetGUID(), _player->GetGUID(), old_mover_guid);
+        sLog.outError("HandleMoveNotActiveMover: incorrect mover guid: mover is " I64FMT " (%u) and should be " I64FMT "(%u) instead of " I64FMT "(%u)",
+            _player->m_mover->GetGUID(),  _player->m_mover->GetGUIDLow(), _player->GetGUID(), _player->GetGUIDLow(), old_mover_guid, GUID_LOPART(old_mover_guid));
         recv_data.rpos(recv_data.wpos());                   // prevent warnings spam
         return;
     }

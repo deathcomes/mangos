@@ -875,7 +875,7 @@ void Object::SetUInt32Value( uint16 index, uint32 value )
 
 void Object::SetUInt64Value( uint16 index, const uint64 &value )
 {
-    ASSERT( index + 1 < m_valuesCount || PrintIndexError( index, true ) );
+    if( index + 1 > m_valuesCount) { PrintIndexError( index, true ); return; }
     if(*((uint64*)&(m_uint32Values[ index ])) != value)
     {
         m_uint32Values[ index ] = *((uint32*)&value);
@@ -1147,6 +1147,8 @@ WorldObject::WorldObject()
     : m_currMap(NULL), m_mapId(0), m_InstanceId(0), m_phaseMask(PHASEMASK_NORMAL),
     m_positionX(0.0f), m_positionY(0.0f), m_positionZ(0.0f), m_orientation(0.0f)
 {
+    m_notifyflags = 0;
+    m_executed_notifies = 0;
 }
 
 void WorldObject::CleanupsBeforeDelete()
@@ -1969,10 +1971,7 @@ void WorldObject::PlayDirectSound( uint32 sound_id, Player* target /*= NULL*/ )
 
 void WorldObject::UpdateObjectVisibility()
 {
-    CellPair p = MaNGOS::ComputeCellPair(GetPositionX(), GetPositionY());
-    Cell cell(p);
-
-    GetMap()->UpdateObjectVisibility(this, cell, p);
+    GetMap()->AddNotifier(this, false);
 }
 
 void WorldObject::AddToClientUpdateList()

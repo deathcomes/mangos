@@ -79,6 +79,10 @@ float World::m_MaxVisibleDistanceInFlight     = DEFAULT_VISIBILITY_DISTANCE;
 float World::m_VisibleUnitGreyDistance        = 0;
 float World::m_VisibleObjectGreyDistance      = 0;
 
+int32 World::m_visibility_notify_periodOnContinents = DEFAULT_VISIBILITY_NOTIFY_PERIOD;
+int32 World::m_visibility_notify_periodInInstances  = DEFAULT_VISIBILITY_NOTIFY_PERIOD;
+int32 World::m_visibility_notify_periodInBGArenas   = DEFAULT_VISIBILITY_NOTIFY_PERIOD;
+
 /// World constructor
 World::World()
 {
@@ -1093,7 +1097,13 @@ void World::LoadConfigSettings(bool reload)
         m_MaxVisibleDistanceInFlight = MAX_VISIBILITY_DISTANCE - m_VisibleObjectGreyDistance;
     }
 
-    ///- Read the "Data" directory from the config file
+    m_configs[CONFIG_PERFORMANCE_TIMER] = sConfig.GetIntDefault("PerformanceTimer", 60000);
+
+    m_visibility_notify_periodOnContinents = sConfig.GetIntDefault("Visibility.Notify.Period.OnContinents", DEFAULT_VISIBILITY_NOTIFY_PERIOD);
+    m_visibility_notify_periodInInstances = sConfig.GetIntDefault("Visibility.Notify.Period.InInstances",   DEFAULT_VISIBILITY_NOTIFY_PERIOD);
+    m_visibility_notify_periodInBGArenas = sConfig.GetIntDefault("Visibility.Notify.Period.InBGArenas",    DEFAULT_VISIBILITY_NOTIFY_PERIOD);  
+
+    //- Read the "Data" directory from the config file
     std::string dataPath = sConfig.GetStringDefault("DataDir","./");
     if( dataPath.at(dataPath.length()-1)!='/' && dataPath.at(dataPath.length()-1)!='\\' )
         dataPath.append("/");
@@ -1550,6 +1560,8 @@ void World::SetInitialWorldSettings()
 
     uint32 uStartInterval = getMSTimeDiff(uStartTime, getMSTime());
     sLog.outString( "SERVER STARTUP TIME: %i minutes %i seconds", uStartInterval / 60000, (uStartInterval % 60000) / 1000 );
+
+    m_timers[WUPDATE_LAGLOG].SetInterval(getConfig(CONFIG_PERFORMANCE_TIMER));
 }
 
 void World::DetectDBCLang()
@@ -1605,6 +1617,13 @@ void World::Update(uint32 diff)
             m_timers[i].Update(diff);
     else m_timers[i].SetCurrent(0);
 
+    if (m_timers[WUPDATE_LAGLOG].Passed())
+    {
+        for (int i = 0; i < MAX_LAG_LOG; ++i)
+            m_laglogs[i] = 0;
+        lagLogStart(LAG_LOG_TOTAL);
+    }
+
     ///- Update the game time and check for shutdown time
     _UpdateGameTime();
 
@@ -1637,7 +1656,9 @@ void World::Update(uint32 diff)
     {
         m_timers[WUPDATE_SESSIONS].Reset();
 
+        lagLogStart(LAG_LOG_SESSION)
         UpdateSessions(diff);
+        lagLogStop(LAG_LOG_SESSION);
     }
 
     /// <li> Handle weather updates when the timer has passed
@@ -1668,7 +1689,7 @@ void World::Update(uint32 diff)
         uint32 maxClientsNum = GetMaxActiveSessionCount();
 
         m_timers[WUPDATE_UPTIME].Reset();
-        loginDatabase.PExecute("UPDATE uptime SET uptime = %u, maxplayers = %u WHERE realmid = %u AND starttime = " UI64FMTD, tmpDiff, maxClientsNum, realmID, uint64(m_startTime));
+        loginDatabase.PExecute("UPDATE uptime SET uptime = %u, maxplayers = %u, diff=%u WHERE realmid = %u AND starttime = " UI64FMTD, tmpDiff, maxClientsNum, diff, realmID, uint64(m_startTime));
     }
 
     /// <li> Handle all other objects
@@ -1676,13 +1697,17 @@ void World::Update(uint32 diff)
     {
         m_timers[WUPDATE_OBJECTS].Reset();
         ///- Update objects when the timer has passed (maps, transport, creatures,...)
+        lagLogStart(LAG_LOG_MAP);
         sMapMgr.Update(diff);                // As interval = 0
+        lagLogStop(LAG_LOG_MAP);
 
         sBattleGroundMgr.Update(diff);
     }
 
+    lagLogStart(LAG_LOG_RESULTQUEUE);
     // execute callbacks from sql queries that were queued recently
     UpdateResultQueue();
+    lagLogStop(LAG_LOG_RESULTQUEUE);
 
     ///- Erase corpses once every 20 minutes
     if (m_timers[WUPDATE_CORPSES].Passed())
@@ -1720,6 +1745,15 @@ void World::Update(uint32 diff)
 
     // And last, but not least handle the issued cli commands
     ProcessCliCommands();
+
+    if (m_timers[WUPDATE_LAGLOG].Passed())
+    {
+        lagLogStop(LAG_LOG_TOTAL);
+        m_timers[WUPDATE_LAGLOG].Reset();
+        loginDatabase.PExecute("INSERT INTO performance_checker (user, lag, diff0, diff1, "
+            "diff2, diff3) VALUES(%u, %u, %u, %u, %u, %u)", GetActiveSessionCount(), m_laglogs[LAG_LOG_TOTAL],
+            m_laglogs[LAG_LOG_SESSION], m_laglogs[LAG_LOG_MAP], m_laglogs[LAG_LOG_RESULTQUEUE], m_laglogs[LAG_LOG_PLAYERSAVE]);
+    }
 }
 
 /// Send a packet to all players (except self if mentioned)
