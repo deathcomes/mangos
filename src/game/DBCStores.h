@@ -60,9 +60,6 @@ MapDifficulty const* GetMapDifficultyData(uint32 mapId, Difficulty difficulty);
 
 uint32 const* /*[3]*/ GetTalentTabPages(uint32 cls);
 
-PvPDifficultyEntry const* GetBattlegroundBracketByLevel(uint32 mapid, uint32 level);
-PvPDifficultyEntry const* GetBattlegroundBracketById(uint32 mapid, BattleGroundBracketId id);
-
 extern DBCStorage <AchievementEntry>             sAchievementStore;
 extern DBCStorage <AchievementCriteriaEntry>     sAchievementCriteriaStore;
 extern DBCStorage <AreaTableEntry>               sAreaStore;// recommend access using functions
@@ -120,7 +117,6 @@ extern DBCStorage <MapEntry>                     sMapStore;
 extern MapDifficultyMap                          sMapDifficultyMap;
 extern DBCStorage <MovieEntry>                   sMovieStore;
 extern DBCStorage <QuestSortEntry>               sQuestSortStore;
-//extern DBCStorage <PvPDifficultyEntry>           sPvPDifficultyStore; -- use GetBattlegroundSlotByLevel for access
 extern DBCStorage <RandomPropertiesPointsEntry>  sRandomPropertiesPointsStore;
 extern DBCStorage <ScalingStatDistributionEntry> sScalingStatDistributionStore;
 extern DBCStorage <ScalingStatValuesEntry>       sScalingStatValuesStore;
