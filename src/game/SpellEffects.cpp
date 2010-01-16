@@ -5496,6 +5496,8 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                         int32 playerAbsorb = damage * auraGlyph->GetModifier()->m_amount;
                         m_caster->CastCustomSpell( unitTarget, 55277, &playerAbsorb, NULL, NULL, true );
                     }
+                    return;
+                }
                 // Demonic Empowerment (succubus Vanish effect)
                 case 54436:
                 {
