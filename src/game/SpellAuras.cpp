@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1569,15 +1569,6 @@ void Aura::TriggerSpell()
 //                    case 812: break;
 //                    // Polymorphic Ray
 //                    case 6965: break;
-//                    // Fire Nova (1-7 ranks)
-//                    case 8350:
-//                    case 8508:
-//                    case 8509:
-//                    case 11312:
-//                    case 11313:
-//                    case 25540:
-//                    case 25544:
-//                        break;
                     // Thaumaturgy Channel
                     case 9712: trigger_spell_id = 21029; break;
 //                    // Egan's Blaster
@@ -6314,6 +6305,22 @@ void Aura::HandleSpellSpecificBoosts(bool apply)
                         }
                     }
                 }
+                else
+                    return;
+            }
+            // Combustion (remove triggered aura stack)
+            else if (m_spellProto->Id == 11129)
+            {
+                if(!apply)
+                    spellId1 = 28682;
+                else
+                    return;
+            }
+            // Combustion (remove main aura)
+            else if (m_spellProto->Id == 28682)
+            {
+                if(!apply)
+                    spellId1 = 11129;
                 else
                     return;
             }

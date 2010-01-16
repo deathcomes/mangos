@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1233,6 +1233,37 @@ void Spell::EffectDummy(uint32 i)
 
                     return;
                 }
+                case 46167:                                 // Planning for the Future: Create Snowfall Glade Pup Cover
+                case 50926:                                 // Gluttonous Lurkers: Create Zul'Drak Rat Cover
+                case 51026:                                 // Create Drakkari Medallion Cover
+                case 51592:                                 // Pickup Primordial Hatchling
+                case 51961:                                 // Captured Chicken Cover
+                {
+                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT || m_caster->GetTypeId() != TYPEID_PLAYER)
+                        return;
+
+                    uint32 spellId = 0;
+
+                    switch(m_spellInfo->Id)
+                    {
+                        case 46167: spellId = 46773; break;
+                        case 50926: spellId = 50927; break;
+                        case 51026: spellId = 50737; break;
+                        case 51592: spellId = 51593; break;
+                        case 51961: spellId = 51037; break;
+                    }
+
+                    if (const SpellEntry *pSpell = sSpellStore.LookupEntry(spellId))
+                    {
+                        unitTarget->CastSpell(m_caster, spellId, true);
+
+                        Creature* creatureTarget = (Creature*)unitTarget;
+
+                        if (const SpellCastTimesEntry *pCastTime = sSpellCastTimesStore.LookupEntry(pSpell->CastingTimeIndex))
+                            creatureTarget->ForcedDespawn(pCastTime->CastTime + 1);
+                    }
+                    return;
+                }
                 case 51582:                                 //Rocket Boots Engaged (Rocket Boots Xtreme and Rocket Boots Xtreme Lite)
                 {
                     if (m_caster->GetTypeId() != TYPEID_PLAYER)
@@ -1243,17 +1274,6 @@ void Spell::EffectDummy(uint32 i)
 
                     m_caster->CastSpell(m_caster, 30452, true, NULL);
                     return;
-                }
-                case 51592:                                 // Pickup Primordial Hatchling
-                {
-                    if (!unitTarget || unitTarget->GetTypeId() != TYPEID_UNIT)
-                        return;
-
-                    Creature* creatureTarget = (Creature*)unitTarget;
-
-                    creatureTarget->ForcedDespawn();
-                    return;
-
                 }
                 case 52308:                                 // Take Sputum Sample
                 {
@@ -4503,13 +4523,13 @@ void Spell::EffectSummonPet(uint32 i)
     Pet* NewSummon = new Pet;
 
     // petentry==0 for hunter "call pet" (current pet summoned if any)
-    if(m_caster->GetTypeId() == TYPEID_PLAYER && NewSummon->LoadPetFromDB((Player*)m_caster,petentry))
+    if(m_caster->GetTypeId() == TYPEID_PLAYER && NewSummon->LoadPetFromDB((Player*)m_caster, petentry))
     {
-        if(NewSummon->getPetType()==SUMMON_PET)
+        if(NewSummon->getPetType() == SUMMON_PET)
         {
             // Remove Demonic Sacrifice auras (known pet)
             Unit::AuraList const& auraClassScripts = m_caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-            for(Unit::AuraList::const_iterator itr = auraClassScripts.begin();itr!=auraClassScripts.end();)
+            for(Unit::AuraList::const_iterator itr = auraClassScripts.begin(); itr != auraClassScripts.end();)
             {
                 if((*itr)->GetModifier()->m_miscvalue == 2228)
                 {
@@ -4535,7 +4555,7 @@ void Spell::EffectSummonPet(uint32 i)
 
     if(!cInfo)
     {
-        sLog.outError("EffectSummonPet: creature entry %u not found.",petentry);
+        sLog.outError("EffectSummonPet: creature entry %u not found.", petentry);
         delete NewSummon;
         return;
     }
@@ -4590,7 +4610,7 @@ void Spell::EffectSummonPet(uint32 i)
 
     // this enables popup window (pet dismiss, cancel), hunter pet additional flags set later
     if(m_caster->GetTypeId() == TYPEID_PLAYER)
-        NewSummon->SetUInt32Value(UNIT_FIELD_FLAGS,UNIT_FLAG_PVP_ATTACKABLE);
+        NewSummon->SetUInt32Value(UNIT_FIELD_FLAGS, UNIT_FLAG_PVP_ATTACKABLE);
 
     if(m_caster->IsPvP())
         NewSummon->SetPvP(true);
@@ -4600,13 +4620,13 @@ void Spell::EffectSummonPet(uint32 i)
     NewSummon->InitLevelupSpellsForLevel();
     NewSummon->InitTalentForLevel();
 
-    if(NewSummon->getPetType()==SUMMON_PET)
+    if(NewSummon->getPetType() == SUMMON_PET)
     {
         // Remove Demonic Sacrifice auras (new pet)
         Unit::AuraList const& auraClassScripts = m_caster->GetAurasByType(SPELL_AURA_OVERRIDE_CLASS_SCRIPTS);
-        for(Unit::AuraList::const_iterator itr = auraClassScripts.begin();itr!=auraClassScripts.end();)
+        for(Unit::AuraList::const_iterator itr = auraClassScripts.begin(); itr != auraClassScripts.end();)
         {
-            if((*itr)->GetModifier()->m_miscvalue==2228)
+            if((*itr)->GetModifier()->m_miscvalue == 2228)
             {
                 m_caster->RemoveAurasDueToSpell((*itr)->GetId());
                 itr = auraClassScripts.begin();
@@ -4620,12 +4640,15 @@ void Spell::EffectSummonPet(uint32 i)
             NewSummon->setPowerType(POWER_ENERGY);
 
         // generate new name for summon pet
-        std::string new_name=sObjectMgr.GeneratePetName(petentry);
+        std::string new_name = sObjectMgr.GeneratePetName(petentry);
         if(!new_name.empty())
             NewSummon->SetName(new_name);
     }
-    else if(NewSummon->getPetType()==HUNTER_PET)
-        NewSummon->SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_NOT_ALLOWED);
+    else if(NewSummon->getPetType() == HUNTER_PET)
+    {
+        NewSummon->RemoveByteFlag(UNIT_FIELD_BYTES_2, 2, UNIT_CAN_BE_RENAMED);
+        NewSummon->SetByteFlag(UNIT_FIELD_BYTES_2, 2, UNIT_CAN_BE_ABANDONED);
+    }
 
     NewSummon->AIM_Initialize();
     NewSummon->SetHealth(NewSummon->GetMaxHealth());
@@ -5186,6 +5209,44 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                     }
                     return;
                 }
+                // Bending Shinbone
+                case 8856:
+                {
+                    if(!itemTarget && m_caster->GetTypeId()!=TYPEID_PLAYER)
+                        return;
+
+                    uint32 spell_id = 0;
+                    switch(urand(1, 5))
+                    {
+                    case 1:  spell_id = 8854; break;
+                    default: spell_id = 8855; break;
+                    }
+
+                    m_caster->CastSpell(m_caster,spell_id,true,NULL);
+                    return;
+                }
+                // Piccolo of the Flaming Fire
+                case 17512:
+                {
+                    if(!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
+                        return;
+                    unitTarget->HandleEmoteCommand(EMOTE_STATE_DANCE);
+                    return;
+                }
+                // Escape artist
+                case 20589:
+                {
+                    if(!unitTarget)
+                        return;
+
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
+                    return;
+                }
+                // Brittle Armor - need remove one 24575 Brittle Armor aura
+                case 24590:
+                    unitTarget->RemoveSingleSpellAurasFromStack(24575);
+                    return;
                 // PX-238 Winter Wondervolt TRAP
                 case 26275:
                 {
@@ -5203,26 +5264,6 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                     unitTarget->CastSpell(unitTarget, iTmpSpellId, true);
                     return;
                 }
-                // Bending Shinbone
-                case 8856:
-                {
-                    if(!itemTarget && m_caster->GetTypeId()!=TYPEID_PLAYER)
-                        return;
-
-                    uint32 spell_id = 0;
-                    switch(urand(1, 5))
-                    {
-                    case 1:  spell_id = 8854; break;
-                    default: spell_id = 8855; break;
-                    }
-
-                    m_caster->CastSpell(m_caster,spell_id,true,NULL);
-                    return;
-                }
-                // Brittle Armor - need remove one 24575 Brittle Armor aura
-                case 24590:
-                    unitTarget->RemoveSingleSpellAurasFromStack(24575);
-                    return;
                 // Mercurial Shield - need remove one 26464 Mercurial Shield aura
                 case 26465:
                     unitTarget->RemoveSingleSpellAurasFromStack(26464);
@@ -5298,36 +5339,6 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                         unitTarget->CastSpell(unitTarget, 25863, false);
                     else
                         unitTarget->CastSpell(unitTarget, 26655, false);
-                    return;
-                }
-                // Piccolo of the Flaming Fire
-                case 17512:
-                {
-                    if(!unitTarget || unitTarget->GetTypeId() != TYPEID_PLAYER)
-                        return;
-                    unitTarget->HandleEmoteCommand(EMOTE_STATE_DANCE);
-                    return;
-                }
-                // Demonic Empowerment (succubus Vanish effect)
-                case 54436:
-                {
-                    if(!unitTarget)
-                        return;
-
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STUN);
-                    return;
-                }
-                // Escape artist
-                case 20589:
-                {
-                    if(!unitTarget)
-                        return;
-
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
-                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
                     return;
                 }
                 // Mirren's Drinking Hat
@@ -5417,6 +5428,11 @@ void Spell::EffectScriptEffect(uint32 effIndex)
 
                     break;
                 }
+                // High Executor's Branding Iron
+                case 48603:
+                    // Torture the Torturer: High Executor's Branding Iron Impact
+                    unitTarget->CastSpell(unitTarget, 48614, true);
+                    return;
                 // Emblazon Runeblade
                 case 51770:
                 {
@@ -5480,6 +5496,16 @@ void Spell::EffectScriptEffect(uint32 effIndex)
                         int32 playerAbsorb = damage * auraGlyph->GetModifier()->m_amount;
                         m_caster->CastCustomSpell( unitTarget, 55277, &playerAbsorb, NULL, NULL, true );
                     }
+                // Demonic Empowerment (succubus Vanish effect)
+                case 54436:
+                {
+                    if(!unitTarget)
+                        return;
+
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_ROOT);
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_DECREASE_SPEED);
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STALKED);
+                    unitTarget->RemoveSpellsCausingAura(SPELL_AURA_MOD_STUN);
                     return;
                 }
                 case 55693:                                 // Remove Collapsing Cave Aura
@@ -7362,7 +7388,7 @@ void Spell::EffectRenamePet(uint32 /*eff_idx*/)
         !((Creature*)unitTarget)->isPet() || ((Pet*)unitTarget)->getPetType() != HUNTER_PET)
         return;
 
-    unitTarget->SetByteValue(UNIT_FIELD_BYTES_2, 2, UNIT_RENAME_ALLOWED);
+    unitTarget->RemoveByteFlag(UNIT_FIELD_BYTES_2, 2, UNIT_CAN_BE_RENAMED);
 }
 
 void Spell::EffectPlayMusic(uint32 i)

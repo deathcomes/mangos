@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1656,7 +1656,7 @@ void World::Update(uint32 diff)
     {
         m_timers[WUPDATE_SESSIONS].Reset();
 
-        lagLogStart(LAG_LOG_SESSION)
+        lagLogStart(LAG_LOG_SESSION);
         UpdateSessions(diff);
         lagLogStop(LAG_LOG_SESSION);
     }

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1138,6 +1138,19 @@ struct MovieEntry
     uint32      Id;                                         // 0 index
     //char*       filename;                                 // 1
     //uint32      unk2;                                     // 2 always 100
+};
+
+struct PvPDifficultyEntry
+{
+    //uint32      id;                                       // 0        m_ID
+    uint32      mapId;                                      // 1  
+    uint32      bracketId;                                  // 2 
+    uint32      minLevel;                                   // 3
+    uint32      maxLevel;                                   // 4
+    uint32      difficulty;                                 // 5
+
+    // helpers
+    BattleGroundBracketId GetBracketId() const { return BattleGroundBracketId(bracketId); }
 };
 
 struct QuestSortEntry

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2005-2009 MaNGOS <http://getmangos.com/>
+ * Copyright (C) 2005-2010 MaNGOS <http://getmangos.com/>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,6 +76,7 @@ const char MapEntryfmt[]="nxixssssssssssssssssxixxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 const char MapDifficultyEntryfmt[]="diixxxxxxxxxxxxxxxxxiix";
 const char MovieEntryfmt[]="nxx";
 const char QuestSortEntryfmt[]="nxxxxxxxxxxxxxxxxx";
+const char PvPDifficultyfmt[]="diiiii";
 const char RandomPropertiesPointsfmt[]="niiiiiiiiiiiiiii";
 const char ScalingStatDistributionfmt[]="niiiiiiiiiiiiiiiiiiiii";
 const char ScalingStatValuesfmt[]="iniiiiiiiiiiiiiiiixxiiii";
